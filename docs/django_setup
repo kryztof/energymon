@@ -1,0 +1,50 @@
+http://www.raspberrypi.org/forums/viewtopic.php?p=105768#p105768
+#! /bin/sh
+#
+
+# get nginx
+sudo apt-get update
+sudo apt-get install nginx sqlite
+
+# set up nginx
+cd ~
+sudo mv /etc/nginx/sites-available/default /etc/nginx/sites-available/defaultoriginal
+wget https://gist.github.com/gists/2968299/download
+tar xzvf download
+sudo cp ./gist2968299-ea7165ae2edd7dbb6e37b9388a6d1e1e7f1e520e/default /etc/nginx/sites-available/default
+rm -rf download
+rm -rf gist2968299-ea7165ae2edd7dbb6e37b9388a6d1e1e7f1e520e
+
+# create user permissions for /var/www
+sudo groupadd www-pub
+sudo mkdir /var/www
+sudo mkdir /var/www/django
+sudo mkdir /var/www/static
+sudo usermod -a -Gwww-pub pi
+sudo chown -R root:www-pub /var/www
+sudo chmod 2775 /var/www
+sudo find /var/www -type d -exec chmod 2775 {} +
+sudo find /var/www -type f -exec chmod 0664 {} +
+sudo echo -e " " >> /etc/profile
+sudo echo -e "umask 0002" >> /etc/profile
+
+# get Django
+cd ~
+wget https://www.djangoproject.com/download/1.4/tarball/
+tar xzvf tarball
+cd Django-1.4
+sudo python setup.py install
+echo -e "import django; print('Django Version ' + django.get_version())" | python
+
+
+#! /bin/sh
+cd /var/www
+django-admin.py startproject testsite
+mv testsite django
+cd django
+python ./manage.py runfcgi host=127.0.0.1 port=8080
+cd ~
+sudo /etc/init.d/nginx restart
+wget localhost
+cat index.html
+rm index.html
